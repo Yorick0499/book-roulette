@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 
 from .catalog import UPSERT_WORK, connect
-from .openlibrary import AUTHOR_ID, WORK_ID, OpenLibraryError, open_stream
+from .openlibrary import AUTHOR_ID, WORK_ID, OpenLibraryError, open_stream, positive_cover_id
 
 DUMPS = (
     ('authors', 'https://openlibrary.org/data/ol_dump_authors_latest.txt.gz'),
@@ -68,6 +68,10 @@ def import_record(connection, phase, line):
         year = re.search(r'\b([12][0-9]{3})\b', date) if isinstance(date, str) else None
         connection.execute(UPSERT_WORK, {'work_id': key, 'title': title.strip()[:2000],
                            'author': ', '.join(names)[:2000], 'year': int(year[1]) if year else None})
+        covers = document.get('covers', [])
+        cover = next((value for item in covers if (value := positive_cover_id(item))), None) if isinstance(covers, list) else None
+        connection.execute('UPDATE catalog_books SET cover_id=COALESCE(?,cover_id),cover_checked=? WHERE work_id=?',
+                           (cover, int(time.time()), key))
     return True
 
 

@@ -1,5 +1,20 @@
 (function () {
   'use strict';
+  function updateCover(image) {
+    image.classList.toggle('is-loaded', image.complete && image.naturalWidth > 0);
+  }
+  for (const image of document.querySelectorAll('.book-cover-image')) {
+    image.addEventListener('load', () => updateCover(image));
+    image.addEventListener('error', () => image.classList.remove('is-loaded'));
+    updateCover(image);
+  }
+  window.BookCovers = { set(image, url) {
+    image.classList.remove('is-loaded');
+    image.hidden = !url;
+    if (url) image.src = url;
+    else image.removeAttribute('src');
+    updateCover(image);
+  } };
   const toast = document.getElementById('status-message');
   let toastTimeout;
   for (const form of document.querySelectorAll('.selection-form')) {

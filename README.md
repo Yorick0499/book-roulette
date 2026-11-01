@@ -33,7 +33,7 @@ Ciepły interfejs po polsku, prawdziwe koło fortuny i dane przechowywane lokaln
 - **Telefon i komputer** — responsywny interfejs, obsługa klawiatury i ograniczonych animacji.
 - **Działanie offline** — zapisane książki, katalog, koło i historia nie wymagają internetu. Połączenie jest potrzebne do instalacji oraz jawnie uruchamianego wyszukiwania i pobierania z Open Library. Bez kont, CDN, Dockera i telemetrii.
 
-Okładki mają autorski wygląd typograficzny. Aplikacja nie pobiera ilustracji z Goodreads ani Open Library. Wyszukiwanie online wysyła tylko wpisane zapytanie do Open Library; nie przesyła Twojej biblioteki, zaznaczenia ani historii. Linki zewnętrzne otwierasz świadomie.
+Okładki książek z Open Library są pobierane leniwie przez [Covers API](https://openlibrary.org/dev/docs/api/covers) i zapisywane lokalnie w `instance/covers/`. Pojawiają się w wynikach, bibliotece i po losowaniu. Gdy okładki brakuje lub serwis jest niedostępny, pozostaje autorska okładka typograficzna. Pobrane obrazy działają offline. Wyszukiwanie wysyła tylko wpisane zapytanie, a pobranie okładki — jej identyfikator; wcześniej zapisane rekordy mogą wymagać jednorazowego odczytu metadanych utworu. Nie przesyłamy całej biblioteki, zaznaczenia ani historii. Linki zewnętrzne otwierasz świadomie.
 
 ## Szybki start
 
@@ -72,7 +72,7 @@ W aplikacji wybierz **Odkrywaj**. Bez klucza API i bez logowania możesz korzyst
 3. Dodaj pojedynczą książkę lub całą widoczną stronę do biblioteki.
 4. W bibliotece wybierz książki z półki `to-read` i przejdź do losowania.
 
-Zapytania są wysyłane tylko na wyraźne żądanie. Serwer ogranicza ruch do maksymalnie jednego zapytania na 1,1 s i używa identyfikującego User-Agent. Ta sama strona wyników jest przez 24 godziny odczytywana z cache; zapisany katalog można przeszukiwać offline bez ograniczenia czasowego. API służy do interaktywnego wyszukiwania, nie do masowego pobierania.
+Zapytania są wysyłane tylko na wyraźne żądanie. Serwer ogranicza ruch do maksymalnie jednego zapytania na 1,1 s i używa identyfikującego User-Agent. Ta sama strona wyników jest przez 24 godziny odczytywana z cache; zapisany katalog można przeszukiwać offline bez ograniczenia czasowego. API służy do interaktywnego wyszukiwania, nie do masowego pobierania. Wyszukiwanie zapisuje też identyfikator okładki (`cover_i`); starszy cache wyników jest automatycznie odświeżany. Okładki pobieramy wyłącznie dla wyświetlanych kart, po ID, w rozmiarze M, z opcją `default=false`. Błędy obrazów są cache’owane przez 30 minut, brakujące metadane przez godzinę; nie pobieramy masowo ilustracji przy imporcie całej bazy. Migracja katalogu zachowuje dotychczasowe dane.
 
 ### Pobierz duży katalog do wyszukiwania offline
 
@@ -97,7 +97,7 @@ Pobrany katalog **nie staje się automatycznie Twoją biblioteką i pulą losowa
 
 Źródła: [dokumentacja API](https://openlibrary.org/developers/api), [Search API](https://openlibrary.org/dev/docs/api/search), [zrzuty danych](https://openlibrary.org/developers/dumps), [informacje o danych i licencjonowaniu](https://openlibrary.org/developers/licensing). Licencja MIT tego repozytorium obejmuje nasz kod; dane zewnętrzne podlegają zasadom ich źródła.
 
-Jeśli zapytanie zwraca 403 lub brak połączenia, sprawdź połączenie i politykę sieci. Potrzebne domeny: `openlibrary.org`, `archive.org` oraz serwery pobierania `*.archive.org`. Nie wyłączaj weryfikacji TLS. Wyszukiwanie zapisanych danych działa także podczas awarii usługi. Pełny zrzut nie jest wymagany do używania integracji.
+Jeśli zapytanie zwraca 403 lub brak połączenia, sprawdź połączenie i politykę sieci. Potrzebne domeny: `openlibrary.org`, `covers.openlibrary.org`, `archive.org` oraz serwery pobierania `*.archive.org`. Nie wyłączaj weryfikacji TLS. Wyszukiwanie zapisanych danych działa także podczas awarii usługi. Pełny zrzut nie jest wymagany do używania integracji.
 
 ## Skąd wziąć książki?
 
@@ -190,6 +190,7 @@ Nie dołączaj prawdziwych eksportów ani zrzutów prywatnej biblioteki do zgło
 | `instance/library.sqlite3` | Własne książki, zaznaczenie, ustawienia i historia |
 | `instance/demo.sqlite3` | Oddzielna biblioteka trybu `--demo` |
 | `instance/catalog.sqlite3` | Lokalny katalog, cache wyszukiwań i postęp pobierania; również nie należy go publikować |
+| `instance/covers/` | Lokalne kopie wyświetlonych okładek; poza Git |
 | `instance/session.key` | Prywatny, generowany lokalnie klucz sesji |
 
 Aby wykonać kopię, **zatrzymaj serwer** i skopiuj katalog `instance/` w prywatne miejsce poza repozytorium. Aby odtworzyć dane, zatrzymaj serwer i przywróć kopię do tego samego katalogu. Nie usuwaj własnej bazy przy aktualizacji kodu. Inicjalizacja tworzy brakujące tabele i wykonuje niedestrukcyjną migrację identyfikatora Open Library. Przed aktualizacją zawsze zachowaj kopię własnej bazy.
@@ -203,6 +204,7 @@ book_roulette/
 ├── db.py             # połączenia SQLite, inicjalizacja i migracja
 ├── openlibrary.py    # klient API, limit ruchu i walidacja źródeł
 ├── catalog.py        # osobny katalog i wyszukiwanie FTS5
+├── covers.py         # leniwe pobieranie okładek i lokalny cache
 ├── catalog_views.py  # ekran Odkrywaj i dodawanie książek
 ├── catalog_download.py # strumieniowy import oficjalnych zrzutów
 ├── schema.sql        # książki, ustawienia, historia, klucze ponowień
@@ -242,7 +244,7 @@ Pełny test w przeglądarce — opcjonalny Playwright:
 
 Jeśli masz systemowe Chromium, zamiast pobierania przeglądarki możesz wskazać `BROWSER_EXECUTABLE=/usr/bin/chromium`. Test przeglądarkowy sam uruchamia lokalny serwer i używa **tymczasowej bazy**, nigdy Twojej biblioteki. Zrzut do dokumentacji generujesz opcją `SCREENSHOT_PATH=docs/screenshot.png`.
 
-Testy obejmują import, duplikaty, błędne CSV, trwałość danych, CSRF, limit pliku, Unicode/XSS, filtry, zaznaczenie, współbieżne ponowienia losowania oraz 0, 1, 2, 10 i 100 książek. Testy katalogu sprawdzają migrację starej bazy, cache/offline, deduplikację, format zrzutów, indeks FTS5, uszkodzony gzip, anulowanie i blokadę równoległego pobierania. Test matematyczny sprawdza każdy indeks także dla 1 000 i 50 000 segmentów. Test przeglądarkowy przechodzi pełną ścieżkę demo → wybór → wyszukiwanie → koło → wynik → historia → import i weryfikuje wskazany segment przy zwykłej oraz ograniczonej animacji. Integrację Open Library testuje na kontrolowanych, fikcyjnych odpowiedziach API i małych zrzutach gzip — testy nie pobierają całej bazy ani nie wymagają dostępu do usługi.
+Testy obejmują import, duplikaty, błędne CSV, trwałość danych, CSRF, limit pliku, Unicode/XSS, filtry, zaznaczenie, współbieżne ponowienia losowania oraz 0, 1, 2, 10 i 100 książek. Testy katalogu sprawdzają migrację starej bazy, cache/offline, okładki i ich brak lub błąd, deduplikację, format zrzutów, indeks FTS5, uszkodzony gzip, anulowanie i blokadę równoległego pobierania. Test matematyczny sprawdza każdy indeks także dla 1 000 i 50 000 segmentów. Test przeglądarkowy przechodzi pełną ścieżkę demo → wybór → wyszukiwanie → koło → wynik → historia → import i weryfikuje wskazany segment przy zwykłej oraz ograniczonej animacji. Integrację Open Library testuje na kontrolowanych, fikcyjnych odpowiedziach API i małych zrzutach gzip — testy nie pobierają całej bazy ani nie wymagają dostępu do usługi.
 
 CI uruchamia testy backendu na Pythonie 3.12 i 3.13, test geometrii oraz oddzielny test przeglądarkowy. Badge na górze pokazuje rzeczywisty stan GitHub Actions, bez wpisywania wyniku na sztywno.
 

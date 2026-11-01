@@ -24,7 +24,7 @@ def validate_url(url):
     parsed = urlsplit(url)
     host = parsed.hostname or ''
     if (parsed.scheme != 'https' or parsed.username or parsed.password or parsed.port not in (None, 443)
-            or not (host == 'openlibrary.org' or host == 'archive.org' or host.endswith('.archive.org'))):
+            or not (host in ('openlibrary.org', 'covers.openlibrary.org') or host == 'archive.org' or host.endswith('.archive.org'))):
         raise OpenLibraryError('Niedozwolony adres źródła Open Library.')
     return url
 
@@ -35,11 +35,11 @@ class SafeRedirect(HTTPRedirectHandler):
         return super().redirect_request(request, fp, code, msg, headers, newurl)
 
 
-def open_stream(url):
+def open_stream(url, timeout=25):
     validate_url(url)
     request = Request(url, headers={'User-Agent': USER_AGENT, 'Accept-Encoding': 'identity'})
     try:
-        return build_opener(SafeRedirect()).open(request, timeout=25)
+        return build_opener(SafeRedirect()).open(request, timeout=timeout)
     except HTTPError as error:
         if error.code == 429:
             message = 'Open Library ogranicza ruch (429). Poczekaj chwilę przed ponowieniem.'
@@ -63,13 +63,12 @@ def normalize_work(document):
     year = document.get('first_publish_year')
     return {'work_id': key, 'title': title.strip()[:2000],
             'author': ', '.join(name[:300] for name in names[:20] if isinstance(name, str))[:2000],
-            'year': year if type(year) is int and 0 < year <= 9999 else None}
+            'year': year if type(year) is int and 0 < year <= 9999 else None,
+            'cover_id': positive_cover_id(document.get('cover_i'))}
 
 
-def search(query, page=1):
+def read_json(url):
     global _last_request
-    params = {'q': query, 'page': page, 'limit': 24,
-              'fields': 'key,title,author_name,first_publish_year'}
     # One shared limiter per local server, including concurrent LAN users.
     with _network_lock:
         delay = 1.1 - (time.monotonic() - _last_request)
@@ -77,14 +76,35 @@ def search(query, page=1):
             time.sleep(delay)
         _last_request = time.monotonic()
         try:
-            with open_stream('https://openlibrary.org/search.json?' + urlencode(params)) as response:
+            with open_stream(url) as response:
                 content = response.read(MAX_RESPONSE + 1)
         except (OSError, TimeoutError, HTTPException) as error:
             raise OpenLibraryError('Przerwano odpowiedź Open Library. Spróbuj później; zapisany katalog pozostaje dostępny.') from error
     if len(content) > MAX_RESPONSE:
         raise OpenLibraryError('Odpowiedź Open Library przekracza bezpieczny limit rozmiaru.')
     try:
-        payload = json.loads(content)
+        return json.loads(content)
+    except (ValueError, UnicodeError, RecursionError) as error:
+        raise OpenLibraryError('Open Library zwróciło nieprawidłowe dane. Spróbuj później.') from error
+
+
+def positive_cover_id(value):
+    return value if type(value) is int and 0 < value < 10**18 else None
+
+
+def work_cover_id(identifier):
+    if not WORK_ID.fullmatch(identifier):
+        return None
+    payload = read_json('https://openlibrary.org' + identifier + '.json')
+    covers = payload.get('covers', []) if isinstance(payload, dict) else []
+    return next((value for item in covers if (value := positive_cover_id(item))), None) if isinstance(covers, list) else None
+
+
+def search(query, page=1):
+    params = {'q': query, 'page': page, 'limit': 24,
+              'fields': 'key,title,author_name,first_publish_year,cover_i'}
+    payload = read_json('https://openlibrary.org/search.json?' + urlencode(params))
+    try:
         if not isinstance(payload, dict) or not isinstance(payload.get('docs'), list):
             raise ValueError
         documents = payload['docs']

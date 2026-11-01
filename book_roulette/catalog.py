@@ -35,17 +35,25 @@ def init_app(app):
             connection.close()
     with connect(app.config['CATALOG_DATABASE']) as connection:
         connection.executescript(Path(__file__).with_name('catalog-schema.sql').read_text(encoding='utf-8'))
+        columns = {row['name'] for row in connection.execute('PRAGMA table_info(catalog_books)')}
+        for name, definition in [('cover_id', 'INTEGER'), ('cover_checked', 'INTEGER NOT NULL DEFAULT 0')]:
+            if name not in columns:
+                connection.execute(f'ALTER TABLE catalog_books ADD COLUMN {name} {definition}')
+        connection.execute('CREATE TABLE IF NOT EXISTS cover_failures (cover_id INTEGER PRIMARY KEY, retry_after INTEGER NOT NULL)')
     connection.close()
 
 
 def fetch_search(connection, query, page):
     cached = connection.execute('SELECT payload,fetched_at FROM catalog_searches WHERE query=? AND page=?',
                                 (query, page)).fetchone()
-    if cached and time.time() - cached['fetched_at'] < 86400:
+    if cached and time.time() - cached['fetched_at'] < 86400 and all('cover_id' in work for work in json.loads(cached['payload'])['works']):
         return json.loads(cached['payload'])
     result = openlibrary.search(query, page)
+    result['works'] = [{**work, 'cover_id': work.get('cover_id')} for work in result['works']]
     with connection:
         connection.executemany(UPSERT_WORK, result['works'])
+        connection.executemany('UPDATE catalog_books SET cover_id=?,cover_checked=? WHERE work_id=?',
+                               [(work.get('cover_id'), int(time.time()), work['work_id']) for work in result['works']])
         connection.execute('INSERT INTO catalog_searches VALUES (?,?,?,?) ON CONFLICT(query,page) '
                            'DO UPDATE SET payload=excluded.payload,fetched_at=excluded.fetched_at',
                            (query, page, json.dumps(result), int(time.time())))

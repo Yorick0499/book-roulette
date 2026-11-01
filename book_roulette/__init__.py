@@ -21,6 +21,7 @@ def create_app(test_config=None):
     if test_config:
         app.config.update(test_config)
     app.config.setdefault("CATALOG_DATABASE", str(Path(app.config["DATABASE"]).with_name("catalog.sqlite3")))
+    app.config.setdefault("COVER_CACHE", str(Path(app.config["CATALOG_DATABASE"]).parent / "covers"))
     Path(app.instance_path).mkdir(parents=True, exist_ok=True, mode=0o700)
     if not app.config.get("SECRET_KEY"):
         secret_path = Path(app.instance_path) / "session.key"
@@ -63,6 +64,10 @@ def create_app(test_config=None):
     from .catalog_download import DownloadManager
     catalog.init_app(app)
     app.extensions["catalog_downloader"] = DownloadManager(app.config["CATALOG_DATABASE"])
+
+    from .covers import bp as covers_bp, cover_url
+    app.register_blueprint(covers_bp)
+    app.jinja_env.globals["cover_url"] = cover_url
 
     from .catalog_views import bp as catalog_bp
     app.register_blueprint(catalog_bp)

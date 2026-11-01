@@ -15,9 +15,10 @@ from waitress import create_server
 from book_roulette import create_app
 app = create_app({'DATABASE': sys.argv[1], 'SECRET_KEY': 'temporary-browser-test-only'})
 # Fixture providers exercise real routes/storage/worker without contacting external services.
-import gzip, io, json
-from book_roulette import openlibrary, catalog_download
-fixture_works = [{'work_id': f'/works/OL{100+i}W', 'title': f'Fikcyjna opowieść {i}', 'author': 'Autor katalogowy', 'year': 2020} for i in range(1,7)]
+import gzip, io, json, base64
+from book_roulette import openlibrary, catalog_download, covers
+fixture_works = [{'work_id': f'/works/OL{100+i}W', 'title': f'Fikcyjna opowieść {i}', 'author': 'Autor katalogowy', 'year': 2020, 'cover_id': 77 if i == 1 else None} for i in range(1,7)]
+covers.open_stream = lambda *args, **kwargs: io.BytesIO(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jZQAAAABJRU5ErkJggg=='))
 openlibrary.search = lambda query, page=1: {'works': fixture_works, 'total': len(fixture_works)}
 def dump_response(url):
     if 'authors' in url:
@@ -139,6 +140,7 @@ def main():
                 page.locator('#online-q').fill('Fikcyjna opowieść')
                 page.get_by_role('button', name='Szukaj w Open Library').click()
                 assert page.locator('.catalog-results .book-card').count() == 6
+                expect(page.locator('.catalog-results .book-cover-image').first).to_have_class(re.compile('is-loaded'))
                 page.get_by_role('button', name='+ Dodaj do biblioteki', exact=True).first.click()
                 assert 'Dodano do biblioteki: 1' in page.locator('.notice').inner_text()
                 page.get_by_role('button', name='Dodaj tę stronę do biblioteki').click()
@@ -154,6 +156,7 @@ def main():
                 assert page.locator('#result-title').inner_text() == 'Fikcyjna opowieść 1'
                 assert page.locator('#result-openlibrary').get_attribute('href') == 'https://openlibrary.org/works/OL101W'
                 assert page.locator('#result-goodreads').is_hidden()
+                expect(page.locator('#result-image')).to_have_class(re.compile('is-loaded'))
                 page.goto(base + '/catalog')
                 page.get_by_label('Mam miejsce i chcę pobrać wielogigabajtowy katalog.').check()
                 page.get_by_role('button', name='Pobierz pełny katalog', exact=False).click()

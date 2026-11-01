@@ -80,6 +80,7 @@
     openLibrary.hidden = !workId || !/^\/works\/OL[0-9]{1,18}W$/.test(workId);
     if (!openLibrary.hidden) openLibrary.href = `https://openlibrary.org${workId}`;
     else openLibrary.removeAttribute('href');
+    BookCovers.set(document.getElementById('result-image'), book.cover_url);
     result.hidden = false;
     result.focus({ preventScroll: true });
     result.scrollIntoView({ behavior: 'auto', block: 'nearest' });

@@ -6,6 +6,7 @@ import secrets
 from flask import Blueprint, abort, jsonify, redirect, render_template, request, session, url_for
 
 from .db import get_db
+from .covers import cover_url
 from .importer import ImportError, import_books, load_demo
 from .library import SORTS, get_preferences, library_page, normalize_preferences
 
@@ -96,7 +97,7 @@ def import_demo():
 
 
 def candidates():
-    return [dict(book) for book in get_db().execute(
+    return [{**dict(book), 'cover_url': cover_url(book['open_library_id'])} for book in get_db().execute(
         'SELECT id,title,author,exclusive_shelf,goodreads_id,open_library_id FROM books WHERE selected=1 ORDER BY id').fetchall()]
 
 
