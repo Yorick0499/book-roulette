@@ -1,19 +1,19 @@
-<!doctype html>
-<html lang="pl">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Import Goodreads — Book Roulette</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
-<body>
-<header class="header"><a class="brand" href="{{ url_for('index') }}">Book <span>Roulette</span></a><a href="{{ url_for('index') }}">Biblioteka</a></header>
-<main class="import-page"><p class="eyebrow">TWOJE KSIĄŻKI, TWOJE HISTORIE</p><h1>Przenieś swoją<br><em>bibliotekę.</em></h1>
+{% extends 'base.html' %}
+{% from 'macros.html' import csrf with context %}
+{% block title %}Import Goodreads — Book Roulette{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='import.js') }}" defer></script>{% endblock %}
+{% block content %}
+<section class="import-page"><p class="eyebrow">TWOJE KSIĄŻKI, TWOJE HISTORIE</p><h1>Przenieś swoją<br><em>bibliotekę.</em></h1>
 <p>W Goodreads wybierz <strong>My Books → Import and Export → Export Library</strong>, a następnie prześlij pobrany plik CSV.</p>
 {% if error %}<p class="notice error" role="alert">{{ error }}</p>{% endif %}
-{% if result %}<div class="notice" role="status"><strong>Import zakończony.</strong> Dodano: {{ result.added }} · Zaktualizowano: {{ result.updated }} · Pominięto: {{ result.skipped }}.<p>Pominięte wiersze mają nieprawidłowy identyfikator, pusty tytuł, błędną ocenę lub powtarzają identyfikator w tym pliku. Pierwszy poprawny wiersz wygrywa.</p><a href="{{ url_for('index') }}#library">Zobacz bibliotekę →</a></div>{% endif %}
+{% if result %}<div class="notice" role="status"><strong>Import zakończony.</strong> Dodano: {{ result.added }} · Zaktualizowano: {{ result.updated }} · Pominięto: {{ result.skipped }}.<p>Pominięte wiersze mają nieprawidłowy identyfikator, pusty tytuł, błędną ocenę lub powtarzają identyfikator w tym pliku. Pierwszy poprawny wiersz wygrywa.</p><a href="{{ url_for('web.library') }}">Zobacz bibliotekę →</a></div>{% endif %}
 <form method="post" enctype="multipart/form-data" id="import-form">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<label for="csv-file">Eksport biblioteki Goodreads (CSV, UTF-8, do 10 MB)</label>
+{{ csrf() }}<label for="csv-file">Eksport biblioteki Goodreads (CSV, UTF-8, do 10 MB)</label>
 <input type="file" id="csv-file" name="file" accept=".csv,text/csv" required>
 <button class="button" type="submit">Importuj bibliotekę <span aria-hidden="true">↗</span></button>
 <p id="import-progress" role="status" hidden>Importowanie… Zaczekaj na podsumowanie.</p>
-</form><p class="privacy-note">Plik jest przetwarzany lokalnie i nie jest zachowywany. Ponowny import aktualizuje metadane, zachowując Twój wybór i historię. Książki nieobecne w pliku pozostają w bibliotece.</p>
-</main>
-<script src="{{ url_for('static', filename='import.js') }}" defer></script>
-</body></html>
+</form>
+{% if empty %}<aside class="demo-panel"><h2>Jeszcze nie masz eksportu?</h2><p>Sprawdź pełne działanie na 12 fikcyjnych książkach. Przykładowy CSV jest częścią repozytorium; nie zawiera prywatnych danych ani identyfikatorów Goodreads.</p><form method="post" action="{{ url_for('web.import_demo') }}">{{ csrf() }}<button class="button secondary" type="submit">Wczytaj dane demonstracyjne</button></form></aside>{% endif %}
+<p class="privacy-note">Plik jest przetwarzany lokalnie i nie jest zachowywany. Ponowny import aktualizuje metadane, zachowując Twój wybór i historię. Książki nieobecne w pliku pozostają w bibliotece. Dane demo można dodać wyłącznie do pustej bazy. Własne dane możesz oddzielić od demo, uruchamiając program bez opcji <code>--demo</code>.</p>
+</section>
+{% endblock %}

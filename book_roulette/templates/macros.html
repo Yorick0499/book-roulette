@@ -1,0 +1,19 @@
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
+{% macro cover(book, large=false) %}
+<div class="cover-placeholder cover-{{ book.id % 4 }}{% if large %} cover-large{% endif %}" aria-hidden="true"><span class="cover-kicker">MIĘDZY WIERSZAMI</span><span class="cover-monogram">{{ book.title[:1] }}</span><span class="cover-name">{{ book.author or 'Twoja biblioteka' }}</span></div>
+{% endmacro %}
+{% macro card(book, page=1) %}
+<article class="book-card{% if book.selected %} is-selected{% endif %}" id="book-{{ book.id }}">
+  {{ cover(book) }}
+  <div class="book-details"><span class="shelf-name">{{ book.exclusive_shelf or 'Bez półki' }}</span><h3>{{ book.title }}</h3><p>{{ book.author or 'Autor nieznany' }}</p>
+  {% if book.average_rating is not none %}<span class="rating" aria-label="Średnia ocena {{ book.average_rating }} na 5">★ {{ '%.2f'|format(book.average_rating) }}</span>{% endif %}
+  </div>
+  <form method="post" action="{{ url_for('web.select_books', page=page) }}" class="selection-form">
+    {{ csrf() }}<input type="hidden" name="book_id" value="{{ book.id }}"><input type="hidden" name="action" value="{{ 'deselect' if book.selected else 'select' }}">
+    <button type="submit" class="select-button" aria-pressed="{{ 'true' if book.selected else 'false' }}" aria-label="Wybierz do losowania: {{ book.title }}"><span aria-hidden="true">{{ '✓' if book.selected else '+' }}</span> {{ 'W losowaniu' if book.selected else 'Dodaj do losowania' }}</button>
+  </form>
+</article>
+{% endmacro %}
+{% macro pagination(endpoint, page, pages) %}
+{% if pages > 1 %}<nav class="pagination" aria-label="Strony wyników">{% if page > 1 %}<a class="button secondary" href="{{ url_for(endpoint, page=page-1) }}">← Poprzednia</a>{% endif %}<span>Strona {{ page }} z {{ pages }}</span>{% if page < pages %}<a class="button secondary" href="{{ url_for(endpoint, page=page+1) }}">Następna →</a>{% endif %}</nav>{% endif %}
+{% endmacro %}

@@ -90,3 +90,18 @@ def import_books(connection, content):
                                    + ', '.join('?' for _ in fields) + ')', list(book.values()))
                 added += 1
     return {'added': added, 'updated': updated, 'skipped': skipped}
+
+
+def load_demo(connection):
+    """An explicit, empty-library-only source adapter with no Goodreads IDs."""
+    from pathlib import Path
+    source = Path(__file__).resolve().parent.parent / 'examples' / 'library-demo.csv'
+    with connection:
+        connection.execute('BEGIN IMMEDIATE')
+        if connection.execute('SELECT COUNT(*) FROM books').fetchone()[0]:
+            return False
+        with source.open(encoding='utf-8', newline='') as stream:
+            for row in csv.DictReader(stream):
+                connection.execute('INSERT INTO books(title,author,bookshelves,exclusive_shelf) VALUES (?,?,?,?)',
+                                   (row['Title'], row['Author'], row['Bookshelves'], row['Exclusive Shelf']))
+    return True

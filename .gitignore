@@ -6,9 +6,11 @@ instance/
 # Private imports, credentials, local data and backups
 *.csv
 *.sqlite
+*.sqlite-*
 *.sqlite3
 *.sqlite3-*
 *.db
+*.db-*
 *.key
 *.pem
 .env
@@ -17,3 +19,5 @@ instance/
 uploads/
 backups/
 *.log
+# Only this synthetic, reviewed example is public.
+!examples/library-demo.csv

@@ -27,3 +27,9 @@ CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
+
+-- Persist only the latest retry payloads; history remains independent.
+CREATE TABLE IF NOT EXISTS draw_requests (
+    key TEXT PRIMARY KEY,
+    payload TEXT NOT NULL
+);

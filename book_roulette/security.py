@@ -12,6 +12,6 @@ def csrf_token():
 def protect_writes():
     if request.method in {'POST', 'PUT', 'PATCH', 'DELETE'}:
         expected = session.get('csrf_token')
-        supplied = request.form.get('csrf_token', '')
+        supplied = request.headers.get('X-CSRF-Token') or request.form.get('csrf_token', '')
         if not expected or not secrets.compare_digest(expected.encode("utf-8"), supplied.encode("utf-8")):
             abort(400, description='Sesja formularza wygasła. Odśwież stronę i spróbuj ponownie.')

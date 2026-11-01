@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% from 'macros.html' import csrf with context %}
+{% block title %}Losowanie — Book Roulette{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='wheel-math.js') }}" defer></script>
+<script src="{{ url_for('static', filename='wheel.js') }}" defer></script>
+{% endblock %}
+{% block content %}
+<section class="page-heading"><div><p class="eyebrow">ODROBINA PRZYPADKU. CAŁE MNÓSTWO HISTORII.</p><h1>Niech zdecyduje <em>los.</em></h1><p class="intro">Każda wybrana książka ma równą szansę. Przed Tobą nowy rozdział.</p></div><a class="text-link" href="{{ url_for('web.library') }}">Zmień wybór książek →</a></section>
+<div id="wheel-app" data-draw-key="{{ draw_key }}" data-draw-url="{{ url_for('web.draw') }}">
+  <div class="wheel-layout"><section class="wheel-stage" aria-label="Koło fortuny"><div class="wheel-frame"><div class="wheel-pointer" aria-hidden="true"></div><canvas id="wheel" width="1000" height="1000" role="img" aria-label="Koło z wybranymi książkami. Wynik zostanie ogłoszony tekstowo."></canvas><span class="wheel-hub" aria-hidden="true">BR<span>✳</span></span></div></section>
+  <section class="wheel-aside"><p class="eyebrow">TWOJA NASTĘPNA KSIĄŻKA</p><h2>Otwórz się na<br>coś nieoczekiwanego.</h2><p id="pool-count">W losowaniu: <strong>{{ candidates|length }}</strong> książek.</p><p id="wheel-status" role="status">{{ 'Gotowe? Zakręć kołem.' if candidates else 'Zaznacz przynajmniej jedną książkę w bibliotece.' }}</p><button class="button spin-button" id="spin" type="button" {% if not candidates %}disabled{% endif %}>Losuj książkę <span aria-hidden="true">↻</span></button><p class="privacy-note">Wynik zapisuje się w historii w chwili losowania, także gdy zamkniesz stronę podczas animacji. Wybrane książki pozostają w puli.</p>
+  </section></div>
+  <section id="result" class="result-panel" hidden tabindex="-1" aria-labelledby="result-title">
+    <div id="result-cover" class="cover-placeholder cover-large" aria-hidden="true"><span class="cover-kicker">TWOJA NASTĘPNA HISTORIA</span><span class="cover-monogram" id="result-initial"></span></div>
+    <div><p class="eyebrow">LOS WYBRAŁ DLA CIEBIE</p><h2 id="result-title"></h2><p id="result-author"></p><span id="result-shelf" class="badge"></span><div class="actions"><button id="again" class="button" type="button">Losuj ponownie ↻</button><a class="button secondary" href="{{ url_for('web.library') }}">Wróć do biblioteki</a></div><a id="result-goodreads" class="text-link" target="_blank" rel="noopener noreferrer" hidden>O książce w Goodreads ↗</a></div>
+  </section>
+  <details class="candidate-list"><summary>Książki na kole ({{ candidates|length }})</summary><ol id="candidate-list">{% for book in candidates %}<li>{{ book.title }} — {{ book.author }}</li>{% endfor %}</ol></details>
+</div>
+<script id="wheel-data" type="application/json">{{ candidates|tojson }}</script>
+<noscript><p class="notice">Losowanie z animacją wymaga JavaScript. Włącz go w przeglądarce, aby zakręcić kołem.</p></noscript>
+{% endblock %}

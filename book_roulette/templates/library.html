@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% from 'macros.html' import card, csrf, pagination with context %}
+{% block title %}Biblioteka — Book Roulette{% endblock %}
+{% block content %}
+<section class="page-heading"><div><p class="eyebrow">TWOJE MAŁE LITERACKIE UNIWERSUM</p><h1>Na co masz <em>ochotę?</em></h1><p class="intro">Wybierz książki do koła. Każda dostanie taką samą szansę.</p></div><a class="button" href="{{ url_for('web.wheel') }}">Losuj książkę ↗</a></section>
+<form class="filters" method="post" action="{{ url_for('web.filter_library') }}">
+  {{ csrf() }}
+  <div class="search-field"><label for="q">Szukaj książki lub autora</label><input id="q" name="q" type="search" maxlength="200" value="{{ preferences.q }}" placeholder="Tytuł, autor…"></div>
+  <div><label for="shelf">Półka</label><select id="shelf" name="shelf"><option value="" {% if not preferences.shelf %}selected{% endif %}>Wszystkie półki</option>{% for shelf in (shelves + (['to-read'] if 'to-read' not in shelves else []))|sort %}<option {% if shelf == preferences.shelf %}selected{% endif %}>{{ shelf }}</option>{% endfor %}</select></div>
+  <div><label for="sort">Sortuj</label><select id="sort" name="sort">{% for key, value in sorts.items() %}<option value="{{ key }}" {% if key == preferences.sort %}selected{% endif %}>{{ value[0] }}</option>{% endfor %}</select></div>
+  <label class="check-label"><input name="only_selected" type="checkbox" value="1" {% if preferences.only_selected == '1' %}checked{% endif %}> Tylko wybrane</label>
+  <button class="button" type="submit">Zastosuj</button>
+</form>
+<div class="library-toolbar"><p>Znaleziono <strong>{{ count }}</strong> z {{ stats.total }} · Wybrane: <strong data-selected-count>{{ stats.selected }}</strong></p><div class="actions">
+  {% if books %}<form method="post" action="{{ url_for('web.select_books', page=page) }}">{{ csrf() }}{% for book in books %}<input type="hidden" name="book_id" value="{{ book.id }}">{% endfor %}<button class="small-button" name="action" value="select">Zaznacz tę stronę ({{ books|length }})</button></form>{% endif %}
+  <form method="post" action="{{ url_for('web.select_books', page=page) }}">{{ csrf() }}<button class="small-button" name="action" value="clear">Odznacz wszystkie</button></form>
+</div></div>
+{% if books %}<div class="book-grid">{% for book in books %}{{ card(book, page) }}{% endfor %}</div>
+{% else %}<div class="empty"><h2>{{ 'Żadna książka nie pasuje do filtrów' if stats.total else 'Twoje półki czekają na pierwsze książki' }}</h2><p>{{ 'Wybierz „Wszystkie półki” i wyczyść wyszukiwanie, aby zobaczyć całą bibliotekę.' if stats.total else 'Zacznij od eksportu CSV Goodreads lub danych demonstracyjnych.' }}</p><a class="button secondary" href="{{ url_for('web.import_library') }}">Przejdź do importu</a></div>{% endif %}
+{{ pagination('web.library', page, pages) }}
+<p class="privacy-note">Filtry i zaznaczenie są zapisywane lokalnie. Domyślna półka to „to-read”. Zmiana filtra nie usuwa książek z losowania.</p>
+{% endblock %}

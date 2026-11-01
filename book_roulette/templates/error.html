@@ -1,0 +1,3 @@
+{% extends 'base.html' %}
+{% block title %}{{ error.code }} — Book Roulette{% endblock %}
+{% block content %}<section class="empty error-page"><p class="eyebrow">{{ error.code }}</p><h1>Coś poszło <em>nie tak.</em></h1><p>{{ error.description if error.code != 404 else 'Ta strona nie istnieje.' }}</p><a class="button" href="{{ url_for('web.index') }}">Wróć na start</a></section>{% endblock %}

@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% from 'macros.html' import pagination with context %}
+{% block title %}Historia — Book Roulette{% endblock %}
+{% block content %}
+<section class="page-heading"><div><p class="eyebrow">KAŻDA KSIĄŻKA MA SWÓJ MOMENT</p><h1>Twoje literackie <em>przypadki.</em></h1><p class="intro">Historia losowań · {{ count }} {{ 'wynik' if count == 1 else 'wyników' }}</p></div><a class="button" href="{{ url_for('web.wheel') }}">Losuj kolejną ↗</a></section>
+{% if draws %}<ol class="history-list" start="{{ (page-1)*30+1 }}">{% for draw in draws %}<li><span class="history-mark" aria-hidden="true">✳</span><div><h2>{{ draw.title }}</h2><p>{{ draw.author or 'Autor nieznany' }}</p></div><time datetime="{{ draw.drawn_at }}">{{ draw.drawn_at[:10] }} {{ draw.drawn_at[11:16] }} UTC</time></li>{% endfor %}</ol>{{ pagination('web.history', page, pages) }}
+{% else %}<div class="empty"><h2>Pierwszy rozdział jest jeszcze przed Tobą</h2><p>Wybierz książki w bibliotece i zakręć kołem. Tutaj zachowamy każdy wynik.</p><a class="button secondary" href="{{ url_for('web.library') }}">Wybierz książki</a></div>{% endif %}
+{% endblock %}

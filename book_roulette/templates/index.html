@@ -1,25 +1,20 @@
-<!doctype html>
-<html lang="pl">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f7f3e9">
-  <title>Book Roulette — Twoja następna historia</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-  <header class="header"><a class="brand" href="{{ url_for('index') }}">Book <span>Roulette</span><span class="brand-dot" aria-hidden="true">✳</span></a><a href="{{ url_for('import_library') }}">Importuj CSV</a></header>
-  <main>
-    <section class="hero" aria-labelledby="welcome">
-      <p class="eyebrow">DOBRE HISTORIE ZACZYNAJĄ SIĘ OD PRZYPADKU</p>
-      <h1 id="welcome">Kolejny rozdział?<br><em>Pozwól się zaskoczyć.</em></h1>
-      <p class="intro">Wszystkie książki, które czekają na swój moment.<br>Jedno miejsce na Twoją następną czytelniczą przygodę.</p>
-      <a class="button" href="#library">Zajrzyj do biblioteki <span aria-hidden="true">↗</span></a>
-      <div class="book-art" aria-hidden="true"><div class="spine one">JESZCZE JEDEN ROZDZIAŁ</div><div class="spine two">Małe wielkie historie</div><div class="spine three">Nieznane światy</div></div>
-    </section>
-    <section class="stats" aria-label="Twoja biblioteka w liczbach"><div><strong>{{ stats.total }}</strong><span>książek w bibliotece</span></div><div><strong>{{ stats.selected }}</strong><span>czeka na losowanie</span></div><div><strong>—</strong><span>ostatnio wylosowana</span></div></section>
-    <section id="library" class="library" aria-labelledby="library-title"><div class="section-heading"><h2 id="library-title">Twoja biblioteka</h2><span>Początek nowej historii</span></div>{% if books %}<div class="book-grid">{% for book in books %}<article class="book-card"><div class="cover-placeholder" aria-hidden="true">{{ book.title[:1] }}</div><h3>{{ book.title }}</h3><p>{{ book.author or 'Autor nieznany' }}</p><span class="badge">{{ book.exclusive_shelf or 'Bez półki' }}</span></article>{% endfor %}</div>{% else %}<div class="empty"><span class="empty-icon" aria-hidden="true">▤</span><h3>Zrób miejsce na swoje książki</h3><p>Zaimportuj eksport Goodreads i znajdź tu swoje książki.</p><a class="button" href="{{ url_for('import_library') }}">Importuj CSV</a></div>{% endif %}</section>
-  </main>
-  <footer>Book Roulette <span>Stworzone z miłości do czytania. Twoje dane zostają u Ciebie.</span></footer>
-</body>
-</html>
+{% extends 'base.html' %}
+{% from 'macros.html' import card, csrf with context %}
+{% block content %}
+<section class="hero" aria-labelledby="welcome">
+  <p class="eyebrow">DOBRE HISTORIE ZACZYNAJĄ SIĘ OD PRZYPADKU</p>
+  <h1 id="welcome">Kolejny rozdział?<br><em>Pozwól się zaskoczyć.</em></h1>
+  <p class="intro">Wszystkie książki, które czekają na swój moment.<br>Jedno miejsce na Twoją następną czytelniczą przygodę.</p>
+  <div class="actions"><a class="button" href="{{ url_for('web.wheel') }}">Losuj książkę <span aria-hidden="true">↗</span></a><a class="text-link" href="{{ url_for('web.library') }}">Przejdź do biblioteki</a></div>
+  <div class="book-art" aria-hidden="true"><div class="spine one">JESZCZE JEDEN ROZDZIAŁ</div><div class="spine two">Małe wielkie historie</div><div class="spine three">Nieznane światy</div></div>
+</section>
+<section class="stats" aria-label="Twoja biblioteka w liczbach">
+  <div><strong>{{ stats.total }}</strong><span>książek w bibliotece</span></div><div><strong data-selected-count>{{ stats.selected }}</strong><span>czeka na losowanie</span></div>
+  <div class="last-draw"><strong aria-hidden="true">{{ '↗' if last_draw else '—' }}</strong><span>Ostatnio wylosowana<br><b>{{ last_draw.title if last_draw else 'Twoja historia dopiero się zaczyna' }}</b></span></div>
+</section>
+<section class="library" id="library" aria-labelledby="library-title">
+  <div class="section-heading"><div><p class="eyebrow">MAŁA ZAPOWIEDŹ WIELKICH PRZYGÓD</p><h2 id="library-title">Twoja biblioteka</h2></div>{% if books %}<a class="text-link" href="{{ url_for('web.library') }}">Wszystkie książki →</a>{% endif %}</div>
+  {% if books %}<div class="book-grid">{% for book in books %}{{ card(book) }}{% endfor %}</div>
+  {% else %}<div class="empty"><span class="empty-icon" aria-hidden="true">▤</span><h3>Zrób miejsce na swoje książki</h3><p>Zaimportuj bibliotekę z Goodreads albo poznaj aplikację na 12 fikcyjnych książkach.<br>Dane demonstracyjne nie są Twoją biblioteką Goodreads.</p><div class="actions center"><a class="button" href="{{ url_for('web.import_library') }}">Importuj własny CSV</a><form method="post" action="{{ url_for('web.import_demo') }}">{{ csrf() }}<button class="button secondary" type="submit">Wypróbuj dane demo</button></form></div></div>{% endif %}
+</section>
+{% endblock %}
