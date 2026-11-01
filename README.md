@@ -3,11 +3,11 @@
 Prywatna, lokalna aplikacja do wybierania kolejnej książki z biblioteki Goodreads.
 Interfejs po polsku, Flask + SQLite + Jinja2, bez zewnętrznych kont i telemetrii.
 
-## Stan: etap 1
+## Stan: etap 2
 
-Działa strona startowa, liczniki biblioteki, trwała baza SQLite oraz serwer Waitress.
-Import CSV, zarządzanie biblioteką, losowanie i historia w interfejsie będą wdrażane
-w kolejnych etapach. Obecna wersja nie jest jeszcze kompletną aplikacją.
+Działa import CSV Goodreads z podsumowaniem, podgląd książek, liczniki, trwała baza
+SQLite oraz serwer Waitress. Wyszukiwanie, filtry, wybór do losowania, koło i historia
+w interfejsie będą wdrażane w kolejnych etapach. Obecna wersja nie jest jeszcze kompletną aplikacją.
 
 ## Instalacja (Ubuntu 24.04)
 
@@ -56,8 +56,15 @@ przyszłe zmiany schematu będą wymagały migracji.
 
 ## Goodreads
 
-Planowany import: **My Books → Import and Export → Export Library**.
-Na tym etapie import nie jest dostępny. Projekt nie używa API Goodreads,
+Eksport: **My Books → Import and Export → Export Library**. Następnie wybierz
+**Importuj CSV** w aplikacji. Obsługiwany jest CSV UTF-8 (również z BOM), z nagłówkami
+`Book Id`, `Title`, `Author`; pozostałe pola mogą być puste lub nieobecne.
+Limit całego żądania to 10 MB i 50 000 wierszy. Błędna struktura pliku odrzuca cały
+import. Wiersze bez liczbowego Book Id, bez tytułu, z błędną oceną oraz duplikaty
+w pliku są pomijane; pierwszy poprawny wiersz danego ID wygrywa.
+Ponowny import aktualizuje metadane bez zmiany lokalnego wyboru, historii i ustawień.
+Nie usuwa książek nieobecnych w pliku. Import nie zaznacza automatycznie książek.
+Odświeżenie podsumowania nie powtarza importu. Projekt nie używa API Goodreads,
 scrapingu ani prywatnych endpointów. Okładki z zewnętrznych usług są opcjonalnym
 elementem późniejszego etapu; obecnie aplikacja nie wysyła danych książek do sieci.
 
@@ -67,5 +74,18 @@ elementem późniejszego etapu; obecnie aplikacja nie wysyła danych książek d
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Test sprawdza odpowiedź strony, lokalny CSS, zapis polskich znaków i zachowanie
-danych po ponownym utworzeniu aplikacji.
+Testy używają wyłącznie fikcyjnych danych. Sprawdzają import, Unicode, ISBN,
+duplikaty, ponowny import, zachowanie danych lokalnych, błędne pliki, CSRF,
+limit przesyłania, bezpieczne wyświetlanie tytułów i trwałość bazy.
+
+## Publiczne repozytorium, prywatne dane
+
+Nie commituj eksportów Goodreads, baz, kluczy, plików `.env` ani kopii zapasowych.
+`.gitignore` wyklucza te pliki; przed każdym commitem sprawdzaj `git diff --cached`.
+Pliki CSV są przetwarzane w pamięci i nie są zapisywane na dysku.
+Klucz podpisujący sesję jest generowany lokalnie w `instance/session.key`
+z uprawnieniami 0600 i nigdy nie powinien trafić do Git. Nie usuwaj go podczas
+zwykłego restartu. Cookies zawierają tylko token CSRF i liczby z podsumowania,
+bez treści biblioteki. Formularze zapisu wymagają tokenu CSRF.
+Tryb HTTP w LAN nie szyfruje transmisji; używaj wyłącznie zaufanej sieci.
+Aplikacja nie ma logowania i CSRF nie zastępuje uwierzytelniania.

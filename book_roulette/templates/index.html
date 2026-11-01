@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <header class="header"><a class="brand" href="{{ url_for('index') }}">Book <span>Roulette</span><span class="brand-dot" aria-hidden="true">✳</span></a><span class="private">Twoja prywatna biblioteka</span></header>
+  <header class="header"><a class="brand" href="{{ url_for('index') }}">Book <span>Roulette</span><span class="brand-dot" aria-hidden="true">✳</span></a><a href="{{ url_for('import_library') }}">Importuj CSV</a></header>
   <main>
     <section class="hero" aria-labelledby="welcome">
       <p class="eyebrow">DOBRE HISTORIE ZACZYNAJĄ SIĘ OD PRZYPADKU</p>
@@ -18,7 +18,7 @@
       <div class="book-art" aria-hidden="true"><div class="spine one">JESZCZE JEDEN ROZDZIAŁ</div><div class="spine two">Małe wielkie historie</div><div class="spine three">Nieznane światy</div></div>
     </section>
     <section class="stats" aria-label="Twoja biblioteka w liczbach"><div><strong>{{ stats.total }}</strong><span>książek w bibliotece</span></div><div><strong>{{ stats.selected }}</strong><span>czeka na losowanie</span></div><div><strong>—</strong><span>ostatnio wylosowana</span></div></section>
-    <section id="library" class="library" aria-labelledby="library-title"><div class="section-heading"><h2 id="library-title">Twoja biblioteka</h2><span>Początek nowej historii</span></div><div class="empty"><span class="empty-icon" aria-hidden="true">▤</span><h3>Zrób miejsce na swoje książki</h3><p>Tu pojawi się Twoja biblioteka z Goodreads.<br>Import CSV będzie dostępny w kolejnym etapie.</p><span class="badge">Etap 1 · Fundamenty gotowe</span></div></section>
+    <section id="library" class="library" aria-labelledby="library-title"><div class="section-heading"><h2 id="library-title">Twoja biblioteka</h2><span>Początek nowej historii</span></div>{% if books %}<div class="book-grid">{% for book in books %}<article class="book-card"><div class="cover-placeholder" aria-hidden="true">{{ book.title[:1] }}</div><h3>{{ book.title }}</h3><p>{{ book.author or 'Autor nieznany' }}</p><span class="badge">{{ book.exclusive_shelf or 'Bez półki' }}</span></article>{% endfor %}</div>{% else %}<div class="empty"><span class="empty-icon" aria-hidden="true">▤</span><h3>Zrób miejsce na swoje książki</h3><p>Zaimportuj eksport Goodreads i znajdź tu swoje książki.</p><a class="button" href="{{ url_for('import_library') }}">Importuj CSV</a></div>{% endif %}</section>
   </main>
   <footer>Book Roulette <span>Stworzone z miłości do czytania. Twoje dane zostają u Ciebie.</span></footer>
 </body>
