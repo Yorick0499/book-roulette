@@ -20,6 +20,7 @@ def create_app(test_config=None):
     )
     if test_config:
         app.config.update(test_config)
+    app.config.setdefault("CATALOG_DATABASE", str(Path(app.config["DATABASE"]).with_name("catalog.sqlite3")))
     Path(app.instance_path).mkdir(parents=True, exist_ok=True, mode=0o700)
     if not app.config.get("SECRET_KEY"):
         secret_path = Path(app.instance_path) / "session.key"
@@ -57,6 +58,14 @@ def create_app(test_config=None):
     db.init_app(app)
     with app.app_context():
         db.init_db()
+
+    from . import catalog
+    from .catalog_download import DownloadManager
+    catalog.init_app(app)
+    app.extensions["catalog_downloader"] = DownloadManager(app.config["CATALOG_DATABASE"])
+
+    from .catalog_views import bp as catalog_bp
+    app.register_blueprint(catalog_bp)
 
     from .views import bp
     app.register_blueprint(bp)

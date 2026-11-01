@@ -14,6 +14,25 @@ import sys, signal
 from waitress import create_server
 from book_roulette import create_app
 app = create_app({'DATABASE': sys.argv[1], 'SECRET_KEY': 'temporary-browser-test-only'})
+# Fixture providers exercise real routes/storage/worker without contacting external services.
+import gzip, io, json
+from book_roulette import openlibrary, catalog_download
+fixture_works = [{'work_id': f'/works/OL{100+i}W', 'title': f'Fikcyjna opowieść {i}', 'author': 'Autor katalogowy', 'year': 2020} for i in range(1,7)]
+openlibrary.search = lambda query, page=1: {'works': fixture_works, 'total': len(fixture_works)}
+def dump_response(url):
+    if 'authors' in url:
+        document = {'key': '/authors/OL99A', 'name': 'Autor ze zrzutu'}
+        kind = 'author'
+    else:
+        document = {'key': '/works/OL999W', 'title': 'Dane ze zrzutu', 'authors': [{'author': {'key': '/authors/OL99A'}}]}
+        kind = 'work'
+    record = '/type/' + kind + chr(9) + document['key'] + chr(9) + '1' + chr(9) + '2020' + chr(9) + json.dumps(document) + chr(10)
+    content = gzip.compress(record.encode())
+    response = io.BytesIO(content)
+    response.headers = {'Content-Length': str(len(content))}
+    return response
+catalog_download.open_stream = dump_response
+catalog_download.MIN_FREE_BYTES = 0
 server = create_server(app, host='127.0.0.1', port=0)
 print(server.effective_port, flush=True)
 def stop(*args):
@@ -69,7 +88,7 @@ def main():
                 # All screens fit the required viewport widths, including long titles.
                 for width in [375, 390, 430, 768, 1440]:
                     page.set_viewport_size({'width': width, 'height': 900})
-                    for route in ['/', '/library', '/import', '/wheel', '/history']:
+                    for route in ['/', '/library', '/import', '/wheel', '/history', '/catalog']:
                         page.goto(base + route)
                         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'), (width, route)
                 print('Responsive views: 375, 390, 430, 768, 1440 px OK')
@@ -115,6 +134,43 @@ def main():
                 page.set_viewport_size({'width': 1440, 'height': 1100})
                 if os.environ.get('SCREENSHOT_PATH'):
                     page.screenshot(path=os.environ['SCREENSHOT_PATH'], full_page=True)
+                # Catalog search/cache, duplicate-safe add, source link and dump worker.
+                page.goto(base + '/catalog')
+                page.locator('#online-q').fill('Fikcyjna opowieść')
+                page.get_by_role('button', name='Szukaj w Open Library').click()
+                assert page.locator('.catalog-results .book-card').count() == 6
+                page.get_by_role('button', name='+ Dodaj do biblioteki', exact=True).first.click()
+                assert 'Dodano do biblioteki: 1' in page.locator('.notice').inner_text()
+                page.get_by_role('button', name='Dodaj tę stronę do biblioteki').click()
+                assert 'Dodano do biblioteki: 5' in page.locator('.notice').inner_text()
+                page.goto(base + '/library')
+                page.get_by_role('button', name='Odznacz wszystkie').click()
+                page.get_by_role('button', name='Wybierz do losowania: Fikcyjna opowieść 1', exact=True).click()
+                expect(page.locator('[data-selected-count]')).to_have_text('1')
+                page.goto(base + '/wheel')
+                page.emulate_media(reduced_motion='reduce')
+                page.locator('#spin').click()
+                page.locator('#result').wait_for(state='visible')
+                assert page.locator('#result-title').inner_text() == 'Fikcyjna opowieść 1'
+                assert page.locator('#result-openlibrary').get_attribute('href') == 'https://openlibrary.org/works/OL101W'
+                assert page.locator('#result-goodreads').is_hidden()
+                page.goto(base + '/catalog')
+                page.get_by_label('Mam miejsce i chcę pobrać wielogigabajtowy katalog.').check()
+                page.get_by_role('button', name='Pobierz pełny katalog', exact=False).click()
+                expect(page.locator('#download-state')).to_contain_text('Pobieranie zakończone', timeout=10000)
+                page.reload()
+                page.locator('#local-q').fill('Dane ze zrzutu')
+                page.get_by_role('button', name='Szukaj lokalnie').click()
+                assert page.locator('.catalog-results .book-card').count() == 1
+                assert 'Autor ze zrzutu' in page.locator('.catalog-results').inner_text()
+                page.goto(base + '/library')
+                assert not page.get_by_role('heading', name='Dane ze zrzutu', exact=True).count()
+                assert not external, external
+                assert not errors, errors
+                if os.environ.get('CATALOG_SCREENSHOT_PATH'):
+                    page.goto(base + '/catalog')
+                    page.screenshot(path=os.environ['CATALOG_SCREENSHOT_PATH'], full_page=True)
+                print('Open Library browser workflow: fixture API/cache, bulk add/dedup, source link, official-format dump import, offline search OK')
                 browser.close()
         finally:
             process.terminate()

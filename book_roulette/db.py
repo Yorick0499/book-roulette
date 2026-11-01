@@ -21,7 +21,13 @@ def close_db(error=None):
 
 def init_db():
     schema = Path(__file__).with_name("schema.sql").read_text(encoding="utf-8")
-    get_db().executescript(schema)
+    connection = get_db()
+    connection.executescript(schema)
+    columns = {row['name'] for row in connection.execute('PRAGMA table_info(books)')}
+    if 'open_library_id' not in columns:
+        connection.execute('ALTER TABLE books ADD COLUMN open_library_id TEXT')
+    connection.execute('CREATE UNIQUE INDEX IF NOT EXISTS books_open_library_id ON books(open_library_id)')
+    connection.commit()
 
 
 def init_app(app):

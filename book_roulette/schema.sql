@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS books (
     id INTEGER PRIMARY KEY,
     goodreads_id TEXT UNIQUE,
+    open_library_id TEXT,
     title TEXT NOT NULL,
     author TEXT NOT NULL DEFAULT '',
     additional_authors TEXT NOT NULL DEFAULT '',

@@ -75,6 +75,11 @@
     link.hidden = !identifier || !/^[0-9]{1,20}$/.test(identifier);
     if (!link.hidden) link.href = `https://www.goodreads.com/book/show/${identifier}`;
     else link.removeAttribute('href');
+    const openLibrary = document.getElementById('result-openlibrary');
+    const workId = book.open_library_id;
+    openLibrary.hidden = !workId || !/^\/works\/OL[0-9]{1,18}W$/.test(workId);
+    if (!openLibrary.hidden) openLibrary.href = `https://openlibrary.org${workId}`;
+    else openLibrary.removeAttribute('href');
     result.hidden = false;
     result.focus({ preventScroll: true });
     result.scrollIntoView({ behavior: 'auto', block: 'nearest' });

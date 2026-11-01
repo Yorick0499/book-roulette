@@ -13,7 +13,7 @@
   </section></div>
   <section id="result" class="result-panel" hidden tabindex="-1" aria-labelledby="result-title">
     <div id="result-cover" class="cover-placeholder cover-large" aria-hidden="true"><span class="cover-kicker">TWOJA NASTĘPNA HISTORIA</span><span class="cover-monogram" id="result-initial"></span></div>
-    <div><p class="eyebrow">LOS WYBRAŁ DLA CIEBIE</p><h2 id="result-title"></h2><p id="result-author"></p><span id="result-shelf" class="badge"></span><div class="actions"><button id="again" class="button" type="button">Losuj ponownie ↻</button><a class="button secondary" href="{{ url_for('web.library') }}">Wróć do biblioteki</a></div><a id="result-goodreads" class="text-link" target="_blank" rel="noopener noreferrer" hidden>O książce w Goodreads ↗</a></div>
+    <div><p class="eyebrow">LOS WYBRAŁ DLA CIEBIE</p><h2 id="result-title"></h2><p id="result-author"></p><span id="result-shelf" class="badge"></span><div class="actions"><button id="again" class="button" type="button">Losuj ponownie ↻</button><a class="button secondary" href="{{ url_for('web.library') }}">Wróć do biblioteki</a></div><a id="result-goodreads" class="text-link" target="_blank" rel="noopener noreferrer" hidden>O książce w Goodreads ↗</a><a id="result-openlibrary" class="text-link" target="_blank" rel="noopener noreferrer" hidden>O książce w Open Library ↗</a></div>
   </section>
   <details class="candidate-list"><summary>Książki na kole ({{ candidates|length }})</summary><ol id="candidate-list">{% for book in candidates %}<li>{{ book.title }} — {{ book.author }}</li>{% endfor %}</ol></details>
 </div>

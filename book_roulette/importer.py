@@ -78,11 +78,14 @@ def import_books(connection, content):
         for book in books:
             existing = connection.execute('SELECT id FROM books WHERE goodreads_id = ?',
                                           (book['goodreads_id'],)).fetchone()
+            if not existing:
+                existing = connection.execute('SELECT id FROM books WHERE goodreads_id IS NULL AND title=? AND author=?',
+                                              (book['title'], book['author'])).fetchone()
             if existing:
-                fields = [field for field in book if field != 'goodreads_id']
+                fields = list(book)
                 connection.execute('UPDATE books SET ' + ', '.join(f'{field} = ?' for field in fields)
-                                   + ' WHERE goodreads_id = ?',
-                                   [book[field] for field in fields] + [book['goodreads_id']])
+                                   + ' WHERE id = ?',
+                                   [book[field] for field in fields] + [existing[0]])
                 updated += 1
             else:
                 fields = list(book)

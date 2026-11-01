@@ -21,3 +21,6 @@ backups/
 *.log
 # Only this synthetic, reviewed example is public.
 !examples/library-demo.csv
+
+# Large Open Library source dumps stay outside Git.
+ol_dump_*.txt.gz

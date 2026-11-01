@@ -4,16 +4,17 @@
 
 ### Twoja biblioteka. Odrobina przypadku. Następny wielki rozdział.
 
-Prywatna aplikacja do losowania książek z Twojej biblioteki Goodreads.<br>
+Prywatna aplikacja do odkrywania i losowania książek z Goodreads i Open Library.<br>
 Ciepły interfejs po polsku, prawdziwe koło fortuny i dane przechowywane lokalnie.
 
 [![Tests](https://github.com/Yorick0499/book-roulette/actions/workflows/tests.yml/badge.svg)](https://github.com/Yorick0499/book-roulette/actions/workflows/tests.yml)
 [![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.1-455b45?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![Open Library](https://img.shields.io/badge/Open_Library-katalog_online_i_offline-8b6f47)](https://openlibrary.org/developers/api)
 [![SQLite](https://img.shields.io/badge/SQLite-local--first-6b7c60?logo=sqlite&logoColor=white)](https://sqlite.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-d4b88f)](LICENSE)
 
-[Start w 3 minuty](#szybki-start) · [Skąd wziąć książki?](#skąd-wziąć-książki) · [iPhone i LAN](#iphone-i-sieć-lan) · [Testy](#testy)
+[Start w 3 minuty](#szybki-start) · [Open Library](#open-library--odkrywanie-i-pobieranie-katalogu) · [Własny Goodreads](#skąd-wziąć-książki) · [iPhone i LAN](#iphone-i-sieć-lan) · [Testy](#testy)
 
 ![Koło Book Roulette z fikcyjnymi książkami demonstracyjnymi](docs/screenshot.png)
 
@@ -23,19 +24,20 @@ Ciepły interfejs po polsku, prawdziwe koło fortuny i dane przechowywane lokaln
 
 ## Co potrafi aplikacja
 
+- **Open Library** — wyszukiwanie online, cache, dodawanie do biblioteki i opcjonalny import oficjalnych zrzutów całego katalogu utworów do wyszukiwania offline.
 - **Import Goodreads CSV** — Unicode, ISBN, oceny, półki, duplikaty i podsumowanie. Ponowny import aktualizuje metadane, zachowując lokalny wybór i historię.
 - **Twoja biblioteka** — wyszukiwanie po tytule i autorze, filtry półek, sortowanie, stronicowanie, wybór pojedynczych książek i całej widocznej strony.
 - **Animowane koło** — równe szanse dla każdej zaznaczonej książki; serwer losuje wynik, a animacja zatrzymuje się na właściwym segmencie.
 - **Wynik i historia** — tytuł, autor, półka, ponowne losowanie oraz link Goodreads, jeśli książka posiada poprawny identyfikator.
 - **Trwałe dane** — książki, wybór, filtry i historia pozostają po odświeżeniu oraz restarcie.
 - **Telefon i komputer** — responsywny interfejs, obsługa klawiatury i ograniczonych animacji.
-- **Działanie offline** — bez konta w usłudze, API, CDN, Dockera i telemetrii. Instalacja zależności wymaga internetu; późniejsza praca z biblioteką już nie.
+- **Działanie offline** — zapisane książki, katalog, koło i historia nie wymagają internetu. Połączenie jest potrzebne do instalacji oraz jawnie uruchamianego wyszukiwania i pobierania z Open Library. Bez kont, CDN, Dockera i telemetrii.
 
-Okładki mają autorski wygląd typograficzny. Aplikacja nie pobiera ilustracji z Goodreads ani Open Library; metadane książek nie opuszczają Twojego serwera. Linki zewnętrzne otwierasz świadomie.
+Okładki mają autorski wygląd typograficzny. Aplikacja nie pobiera ilustracji z Goodreads ani Open Library. Wyszukiwanie online wysyła tylko wpisane zapytanie do Open Library; nie przesyła Twojej biblioteki, zaznaczenia ani historii. Linki zewnętrzne otwierasz świadomie.
 
 ## Szybki start
 
-Wymagany **Python 3.12+**, Git, pip i moduł `venv`. Środowisko docelowe: Ubuntu 24.04 LTS.
+Wymagany **Python 3.12+**, Git, pip i moduł `venv`. Środowisko docelowe: Ubuntu 24.04 LTS, SQLite ze wsparciem FTS5 (standardowo dostępne w Pythonie na Ubuntu).
 Jeśli brakuje modułu `venv`, przygotuj pakiet systemowy `python3-venv` przed instalacją.
 
 ```bash
@@ -59,9 +61,47 @@ Przejdź do **Biblioteka → Zaznacz tę stronę → Losuj książkę**. Domyśl
 
 Uruchomienie bez `--demo` wraca do własnej bazy `instance/library.sqlite3`. Dane demo nie są automatycznie dodawane do własnej biblioteki. W pustej bibliotece dostępny jest też jawny przycisk wczytania demo do aktualnie używanej bazy; nie zastępuje ani nie usuwa istniejących danych.
 
+## Open Library — odkrywanie i pobieranie katalogu
+
+W aplikacji wybierz **Odkrywaj**. Bez klucza API i bez logowania możesz korzystać z dwóch trybów:
+
+### Wyszukaj i dodaj kilka książek
+
+1. Wpisz tytuł lub autora w formularzu **Szukaj nowych książek · Open Library**.
+2. Kliknij **Szukaj w Open Library**. Wyniki tej strony zapisują się lokalnie.
+3. Dodaj pojedynczą książkę lub całą widoczną stronę do biblioteki.
+4. W bibliotece wybierz książki z półki `to-read` i przejdź do losowania.
+
+Zapytania są wysyłane tylko na wyraźne żądanie. Serwer ogranicza ruch do maksymalnie jednego zapytania na 1,1 s i używa identyfikującego User-Agent. Ta sama strona wyników jest przez 24 godziny odczytywana z cache; zapisany katalog można przeszukiwać offline bez ograniczenia czasowego. API służy do interaktywnego wyszukiwania, nie do masowego pobierania.
+
+### Pobierz duży katalog do wyszukiwania offline
+
+Na ekranie **Odkrywaj**, w sekcji **Pobierz pełny katalog Open Library**, potwierdź rozmiar transferu i uruchom pobieranie. Serwer strumieniowo pobiera oficjalne pliki:
+
+- `https://openlibrary.org/data/ol_dump_authors_latest.txt.gz`
+- `https://openlibrary.org/data/ol_dump_works_latest.txt.gz`
+
+Najpierw zapisuje autorów, potem utwory z przypisanymi nazwami autorów. Katalog i indeks pełnotekstowy SQLite FTS5 trafiają do `instance/catalog.sqlite3`. Nie przechowujemy dodatkowej, rozpakowanej kopii zrzutów ani plików gzip. TLS pozostaje włączony, a gzip sprawdza integralność strumienia przy pełnym odczycie.
+
+**To duży transfer i długotrwały import milionów rekordów.** Na start wymagane jest minimum **50 GiB wolnego miejsca**, a faktyczne zapotrzebowanie może być większe. Ten próg jest zabezpieczeniem startowym, nie gwarancją końcowego rozmiaru. Zadanie zatrzymuje się również, gdy pozostaje mniej niż 1 GiB. Nie uruchamia się przy instalacji ani starcie aplikacji. Ma postęp, licznik rekordów i przycisk zatrzymania; biblioteka i losowanie pozostają dostępne podczas importu.
+
+Serwer musi działać przez cały czas. Po restarcie niedokończony import jest oznaczany jako przerwany. Ukończone partie pozostają dostępne lokalnie. Ponowienie pobiera źródła od początku i aktualizuje istniejące rekordy po identyfikatorze, bez duplikatów; nie ma wznawiania strumienia od ostatniego bajtu. Zakończenie nie usuwa starszych lokalnych rekordów, których zabrakło w nowym zrzucie. Błąd lub uszkodzony gzip nie jest oznaczany jako udany import.
+
+**Zakres:** publiczne metadane autorów i utworów Open Library. To nie teksty książek, nie wszystkie wydania/ISBN, nie oceny Goodreads ani komplet jego katalogu. Niektóre rekordy społecznościowe mają braki lub błędy. Surowe zrzuty obejmują znacznie więcej pól niż przechowuje aplikacja — zapisujemy identyfikator utworu, tytuł, autorów i dostępny rok pierwszej publikacji.
+
+Pobrany katalog **nie staje się automatycznie Twoją biblioteką i pulą losowania**. Dodajesz z niego tylko interesujące książki. Ponowne dodanie tego samego utworu zachowuje lokalne zaznaczenie. Dokładnie zgodny tytuł i autor pozwalają powiązać istniejącą książkę Goodreads bez nadpisywania jej ocen; nie jest to uniwersalne dopasowywanie różnych wydań i tłumaczeń.
+
+![Katalog Open Library — interfejs z fikcyjnymi rekordami testowymi](docs/open-library.png)
+
+<sub>Zrzut z testu integracyjnego na fikcyjnym API i małych zrzutach w oficjalnym formacie. Nie przedstawia pobranego, pełnego katalogu usługi.</sub>
+
+Źródła: [dokumentacja API](https://openlibrary.org/developers/api), [Search API](https://openlibrary.org/dev/docs/api/search), [zrzuty danych](https://openlibrary.org/developers/dumps), [informacje o danych i licencjonowaniu](https://openlibrary.org/developers/licensing). Licencja MIT tego repozytorium obejmuje nasz kod; dane zewnętrzne podlegają zasadom ich źródła.
+
+Jeśli zapytanie zwraca 403 lub brak połączenia, sprawdź połączenie i politykę sieci. Potrzebne domeny: `openlibrary.org`, `archive.org` oraz serwery pobierania `*.archive.org`. Nie wyłączaj weryfikacji TLS. Wyszukiwanie zapisanych danych działa także podczas awarii usługi. Pełny zrzut nie jest wymagany do używania integracji.
+
 ## Skąd wziąć książki?
 
-**`git clone` dostarcza aplikację i publiczny CSV demonstracyjny, ale nie Twoją prywatną bibliotekę ani katalog wszystkich książek Goodreads.**
+**Po `git clone` możesz od razu szukać książek przez Open Library. Repozytorium zawiera też CSV demo, ale nie prywatną bibliotekę ani katalog wszystkich książek Goodreads.**
 
 Goodreads nie wydaje nowych kluczy do publicznego API od grudnia 2020 r. Projekt nie obiecuje automatycznej synchronizacji, nie używa scrapingu ani prywatnych endpointów. Własną bibliotekę przeniesiesz przez oficjalny eksport:
 
@@ -149,9 +189,10 @@ Nie dołączaj prawdziwych eksportów ani zrzutów prywatnej biblioteki do zgło
 | --- | --- |
 | `instance/library.sqlite3` | Własne książki, zaznaczenie, ustawienia i historia |
 | `instance/demo.sqlite3` | Oddzielna biblioteka trybu `--demo` |
+| `instance/catalog.sqlite3` | Lokalny katalog, cache wyszukiwań i postęp pobierania; również nie należy go publikować |
 | `instance/session.key` | Prywatny, generowany lokalnie klucz sesji |
 
-Aby wykonać kopię, **zatrzymaj serwer** i skopiuj katalog `instance/` w prywatne miejsce poza repozytorium. Aby odtworzyć dane, zatrzymaj serwer i przywróć kopię do tego samego katalogu. Nie usuwaj własnej bazy przy aktualizacji kodu. Inicjalizacja tworzy brakujące tabele bez kasowania istniejących danych; przyszłe zmiany kolumn będą wymagały migracji.
+Aby wykonać kopię, **zatrzymaj serwer** i skopiuj katalog `instance/` w prywatne miejsce poza repozytorium. Aby odtworzyć dane, zatrzymaj serwer i przywróć kopię do tego samego katalogu. Nie usuwaj własnej bazy przy aktualizacji kodu. Inicjalizacja tworzy brakujące tabele i wykonuje niedestrukcyjną migrację identyfikatora Open Library. Przed aktualizacją zawsze zachowaj kopię własnej bazy.
 
 ## Architektura
 
@@ -159,7 +200,11 @@ Aby wykonać kopię, **zatrzymaj serwer** i skopiuj katalog `instance/` w prywat
 book_roulette/
 ├── __init__.py       # konfiguracja, nagłówki bezpieczeństwa, fabryka aplikacji
 ├── __main__.py       # CLI: localhost / LAN / demo, Waitress
-├── db.py             # połączenia SQLite i inicjalizacja
+├── db.py             # połączenia SQLite, inicjalizacja i migracja
+├── openlibrary.py    # klient API, limit ruchu i walidacja źródeł
+├── catalog.py        # osobny katalog i wyszukiwanie FTS5
+├── catalog_views.py  # ekran Odkrywaj i dodawanie książek
+├── catalog_download.py # strumieniowy import oficjalnych zrzutów
 ├── schema.sql        # książki, ustawienia, historia, klucze ponowień
 ├── importer.py       # adapter Goodreads CSV i oddzielne źródło demo
 ├── library.py        # wyszukiwanie, półki, stronicowanie i preferencje
@@ -171,7 +216,7 @@ examples/             # wyłącznie fikcyjny CSV demonstracyjny
 tests/                # testy backendu, geometrii i przeglądarki
 ```
 
-Lokalne `books.id` i opcjonalne `goodreads_id` są osobnymi polami. Nowe źródła danych można dodać jako adapter importera bez zmiany algorytmu losowania. Dane demo nie dostają fikcyjnych identyfikatorów Goodreads.
+Lokalne `books.id`, opcjonalne `goodreads_id` i `open_library_id` są osobnymi polami. Migracja starszej bazy dodaje identyfikator Open Library bez kasowania książek, zaznaczenia ani historii. Katalog publicznych metadanych jest osobną bazą i jest współdzielony między zwykłym trybem a demo. Dane demo nie dostają fikcyjnych identyfikatorów zewnętrznych.
 
 ## Testy
 
@@ -197,7 +242,7 @@ Pełny test w przeglądarce — opcjonalny Playwright:
 
 Jeśli masz systemowe Chromium, zamiast pobierania przeglądarki możesz wskazać `BROWSER_EXECUTABLE=/usr/bin/chromium`. Test przeglądarkowy sam uruchamia lokalny serwer i używa **tymczasowej bazy**, nigdy Twojej biblioteki. Zrzut do dokumentacji generujesz opcją `SCREENSHOT_PATH=docs/screenshot.png`.
 
-Testy obejmują import, duplikaty, błędne CSV, trwałość danych, CSRF, limit pliku, Unicode/XSS, filtry, zaznaczenie, współbieżne ponowienia losowania oraz 0, 1, 2, 10 i 100 książek. Test matematyczny sprawdza każdy indeks także dla 1 000 i 50 000 segmentów. Test przeglądarkowy przechodzi pełną ścieżkę demo → wybór → wyszukiwanie → koło → wynik → historia → import i weryfikuje wskazany segment przy zwykłej oraz ograniczonej animacji.
+Testy obejmują import, duplikaty, błędne CSV, trwałość danych, CSRF, limit pliku, Unicode/XSS, filtry, zaznaczenie, współbieżne ponowienia losowania oraz 0, 1, 2, 10 i 100 książek. Testy katalogu sprawdzają migrację starej bazy, cache/offline, deduplikację, format zrzutów, indeks FTS5, uszkodzony gzip, anulowanie i blokadę równoległego pobierania. Test matematyczny sprawdza każdy indeks także dla 1 000 i 50 000 segmentów. Test przeglądarkowy przechodzi pełną ścieżkę demo → wybór → wyszukiwanie → koło → wynik → historia → import i weryfikuje wskazany segment przy zwykłej oraz ograniczonej animacji. Integrację Open Library testuje na kontrolowanych, fikcyjnych odpowiedziach API i małych zrzutach gzip — testy nie pobierają całej bazy ani nie wymagają dostępu do usługi.
 
 CI uruchamia testy backendu na Pythonie 3.12 i 3.13, test geometrii oraz oddzielny test przeglądarkowy. Badge na górze pokazuje rzeczywisty stan GitHub Actions, bez wpisywania wyniku na sztywno.
 

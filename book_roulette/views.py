@@ -97,7 +97,7 @@ def import_demo():
 
 def candidates():
     return [dict(book) for book in get_db().execute(
-        'SELECT id,title,author,exclusive_shelf,goodreads_id FROM books WHERE selected=1 ORDER BY id').fetchall()]
+        'SELECT id,title,author,exclusive_shelf,goodreads_id,open_library_id FROM books WHERE selected=1 ORDER BY id').fetchall()]
 
 
 @bp.get('/wheel')

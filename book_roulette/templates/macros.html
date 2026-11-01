@@ -6,6 +6,7 @@
 <article class="book-card{% if book.selected %} is-selected{% endif %}" id="book-{{ book.id }}">
   {{ cover(book) }}
   <div class="book-details"><span class="shelf-name">{{ book.exclusive_shelf or 'Bez półki' }}</span><h3>{{ book.title }}</h3><p>{{ book.author or 'Autor nieznany' }}</p>
+  {% if book.open_library_id %}<a class="text-link" href="https://openlibrary.org{{ book.open_library_id }}" target="_blank" rel="noopener noreferrer">Open Library ↗</a>{% endif %}
   {% if book.average_rating is not none %}<span class="rating" aria-label="Średnia ocena {{ book.average_rating }} na 5">★ {{ '%.2f'|format(book.average_rating) }}</span>{% endif %}
   </div>
   <form method="post" action="{{ url_for('web.select_books', page=page) }}" class="selection-form">

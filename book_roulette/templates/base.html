@@ -16,7 +16,7 @@
   <header class="header">
     <a class="brand" href="{{ url_for('web.index') }}">Book <span>Roulette</span><span class="brand-dot" aria-hidden="true">✳</span></a>
     <nav aria-label="Nawigacja główna">
-      {% for endpoint, label in [('web.index','Start'),('web.library','Biblioteka'),('web.wheel','Losowanie'),('web.history','Historia'),('web.import_library','Import CSV')] %}
+      {% for endpoint, label in [('web.index','Start'),('web.library','Biblioteka'),('catalog.index','Odkrywaj'),('web.wheel','Losowanie'),('web.history','Historia'),('web.import_library','Import CSV')] %}
       <a href="{{ url_for(endpoint) }}" {% if request.endpoint == endpoint %}aria-current="page"{% endif %}>{{ label }}</a>
       {% endfor %}
     </nav>
