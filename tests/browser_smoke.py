@@ -18,6 +18,8 @@ app = create_app({'DATABASE': sys.argv[1], 'SECRET_KEY': 'temporary-browser-test
 import gzip, io, json, base64
 from book_roulette import openlibrary, catalog_download, covers
 fixture_works = [{'work_id': f'/works/OL{100+i}W', 'title': f'Fikcyjna opowieść {i}', 'author': 'Autor katalogowy', 'year': 2020, 'cover_id': 77 if i == 1 else None} for i in range(1,7)]
+covers.work_cover_id = lambda identifier: None
+covers.work_edition_sources = lambda identifier: []
 covers.open_stream = lambda *args, **kwargs: io.BytesIO(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jZQAAAABJRU5ErkJggg=='))
 openlibrary.search = lambda query, page=1: {'works': fixture_works, 'total': len(fixture_works)}
 def dump_response(url):

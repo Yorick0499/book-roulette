@@ -65,8 +65,9 @@ def create_app(test_config=None):
     catalog.init_app(app)
     app.extensions["catalog_downloader"] = DownloadManager(app.config["CATALOG_DATABASE"])
 
-    from .covers import bp as covers_bp, cover_url
+    from .covers import bp as covers_bp, cover_url, CoverLoader
     app.register_blueprint(covers_bp)
+    app.extensions["cover_loader"] = CoverLoader(app)
     app.jinja_env.globals["cover_url"] = cover_url
 
     from .catalog_views import bp as catalog_bp

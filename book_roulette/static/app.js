@@ -3,17 +3,66 @@
   function updateCover(image) {
     image.classList.toggle('is-loaded', image.complete && image.naturalWidth > 0);
   }
+  const versions = new WeakMap();
+  async function loadCover(image, url) {
+    const version = (versions.get(image) || 0) + 1;
+    versions.set(image, version);
+    image.classList.remove('is-loaded');
+    image.removeAttribute('src');
+    const note = image.parentElement.querySelector('.cover-status');
+    if (note) note.textContent = url ? 'Ładowanie okładki…' : '';
+    if (!url) return;
+    const deadline = Date.now() + 45000;
+    let delay = 500;
+    while (versions.get(image) === version && image.isConnected) {
+      try {
+        const response = await fetch(url, { headers: { Accept: 'application/json' } });
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        if (versions.get(image) !== version) return;
+        if (data.state === 'ready') {
+          image.src = data.url;
+          return;
+        }
+        if (data.state !== 'pending') {
+          if (note) note.textContent = data.state === 'missing' ? 'Nie znaleziono okładki w Open Library' : 'Okładka chwilowo niedostępna';
+          return;
+        }
+      } catch {
+        if (note) note.textContent = 'Nie można teraz wczytać okładki';
+        return;
+      }
+      if (Date.now() > deadline) {
+        if (note) note.textContent = 'Okładka jeszcze się ładuje. Odśwież stronę za chwilę.';
+        return;
+      }
+      await new Promise(resolve => setTimeout(resolve, delay));
+      delay = Math.min(2500, delay * 1.4);
+    }
+  }
+  const observer = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) {
+        observer.unobserve(entry.target);
+        loadCover(entry.target, entry.target.dataset.coverUrl);
+      }
+    }
+  }, { rootMargin: '100px' }) : null;
   for (const image of document.querySelectorAll('.book-cover-image')) {
     image.addEventListener('load', () => updateCover(image));
-    image.addEventListener('error', () => image.classList.remove('is-loaded'));
-    updateCover(image);
+    image.addEventListener('error', () => {
+      image.classList.remove('is-loaded');
+      const note = image.parentElement.querySelector('.cover-status');
+      if (note) note.textContent = 'Okładka chwilowo niedostępna';
+    });
+    if (image.dataset.coverUrl) {
+      if (observer) observer.observe(image);
+      else loadCover(image, image.dataset.coverUrl);
+    }
   }
   window.BookCovers = { set(image, url) {
-    image.classList.remove('is-loaded');
     image.hidden = !url;
-    if (url) image.src = url;
-    else image.removeAttribute('src');
-    updateCover(image);
+    loadCover(image, url);
   } };
   const toast = document.getElementById('status-message');
   let toastTimeout;

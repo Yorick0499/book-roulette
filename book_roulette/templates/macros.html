@@ -1,6 +1,6 @@
 {% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
 {% macro cover(book, large=false, variant=0) %}
-<div class="cover-placeholder cover-{{ (book.id|default(variant)) % 4 }}{% if large %} cover-large{% endif %}" aria-hidden="true"><span class="cover-kicker">MIĘDZY WIERSZAMI</span><span class="cover-monogram">{{ book.title[:1] }}</span><span class="cover-name">{{ book.author or 'Twoja biblioteka' }}</span>{% set image_url = cover_url(book.open_library_id|default(book.work_id|default(none))) %}{% if image_url %}<img class="book-cover-image" src="{{ image_url }}" alt="" loading="lazy" decoding="async">{% endif %}</div>
+<div class="cover-placeholder cover-{{ (book.id|default(variant)) % 4 }}{% if large %} cover-large{% endif %}" aria-hidden="true"><span class="cover-kicker">MIĘDZY WIERSZAMI</span><span class="cover-monogram">{{ book.title[:1] }}</span><span class="cover-name">{{ book.author or 'Twoja biblioteka' }}</span>{% set image_url = cover_url(book.open_library_id|default(book.work_id|default(none))) %}{% if image_url %}<img class="book-cover-image" data-cover-url="{{ image_url }}" alt="" loading="lazy" decoding="async"><span class="cover-status"></span>{% endif %}</div>
 {% endmacro %}
 {% macro card(book, page=1) %}
 <article class="book-card{% if book.selected %} is-selected{% endif %}" id="book-{{ book.id }}">

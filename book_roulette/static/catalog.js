@@ -1,5 +1,12 @@
 (function () {
   'use strict';
+  for (const form of document.querySelectorAll('.online-search')) {
+    form.addEventListener('submit', () => {
+      form.querySelector('button').disabled = true;
+      form.setAttribute('aria-busy', 'true');
+      form.querySelector('.search-progress').hidden = false;
+    });
+  }
   const status = document.getElementById('download-status');
   if (!status || status.dataset.running !== 'true') return;
   const names = { running: 'Pobieranie trwa', completed: 'Pobieranie zakończone — odśwież katalog', failed: 'Pobieranie nie powiodło się', cancelled: 'Pobieranie anulowane', interrupted: 'Pobieranie przerwane restartem' };

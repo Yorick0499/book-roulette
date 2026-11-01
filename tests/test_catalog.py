@@ -5,6 +5,9 @@ import re
 import sqlite3
 import tempfile
 import unittest
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -14,7 +17,7 @@ from book_roulette import create_app
 from book_roulette.catalog import UPSERT_WORK, get_catalog
 from book_roulette.catalog_download import DownloadManager, import_record
 from book_roulette.importer import import_books
-from book_roulette.openlibrary import OpenLibraryError, normalize_work, open_stream, search, validate_url
+from book_roulette.openlibrary import OpenLibraryError, normalize_work, open_stream, read_json, search, validate_url, work_edition_sources
 
 WORK = {'work_id': '/works/OL123W', 'title': 'Fikcyjna książka', 'author': 'Fikcyjny Autor', 'year': 2020}
 
@@ -182,6 +185,35 @@ class ClientTests(unittest.TestCase):
         normalized = normalize_work({'key': '/works/OL1W', 'title': 'Test', 'author_name': ['Autor', 123], 'first_publish_year': True})
         self.assertEqual(normalized['author'], 'Autor')
         self.assertIsNone(normalized['year'])
+
+    def test_slow_metadata_does_not_hold_search_network_lock(self):
+        entered, release = threading.Event(), threading.Event()
+        def source(url, timeout=12):
+            if '/works/' in url:
+                entered.set()
+                release.wait(3)
+                return Response(b'{"covers":[]}')
+            return Response(b'{"docs":[]}')
+        with patch('book_roulette.openlibrary.open_stream', side_effect=source), patch('book_roulette.openlibrary._last_request', -100):
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(read_json, 'https://openlibrary.org/works/OL1W.json')
+                try:
+                    self.assertTrue(entered.wait(1))
+                    started = time.monotonic()
+                    self.assertEqual(read_json('https://openlibrary.org/search.json'), {'docs': []})
+                    self.assertLess(time.monotonic() - started, 2.5)
+                finally:
+                    release.set()
+                self.assertEqual(future.result(), {'covers': []})
+
+    def test_edition_sources_are_bounded_and_validated(self):
+        payload = {'entries': [
+            {'key': '/books/OL1M', 'covers': [-1, 55]},
+            {'key': 'https://evil.example/', 'covers': ['bad']},
+            {'key': '/books/OL2M', 'covers': None},
+        ]}
+        with patch('book_roulette.openlibrary.read_json', return_value=payload):
+            self.assertEqual(work_edition_sources('/works/OL1W'), ['55', 'OL1M'])
 
     def test_rate_limit_and_redirect_failures_are_friendly(self):
         for status in [403, 429, 503]:

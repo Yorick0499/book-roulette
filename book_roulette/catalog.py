@@ -36,9 +36,10 @@ def init_app(app):
     with connect(app.config['CATALOG_DATABASE']) as connection:
         connection.executescript(Path(__file__).with_name('catalog-schema.sql').read_text(encoding='utf-8'))
         columns = {row['name'] for row in connection.execute('PRAGMA table_info(catalog_books)')}
-        for name, definition in [('cover_id', 'INTEGER'), ('cover_checked', 'INTEGER NOT NULL DEFAULT 0')]:
+        for name, definition in [('cover_id', 'INTEGER'), ('cover_checked', 'INTEGER NOT NULL DEFAULT 0'), ('cover_edition', 'TEXT'), ('cover_resolved', 'INTEGER NOT NULL DEFAULT 0')]:
             if name not in columns:
                 connection.execute(f'ALTER TABLE catalog_books ADD COLUMN {name} {definition}')
+        connection.execute('CREATE TABLE IF NOT EXISTS cover_work_status (work_id TEXT PRIMARY KEY, state TEXT NOT NULL, cache_key TEXT, retry_after INTEGER NOT NULL DEFAULT 0)')
         connection.execute('CREATE TABLE IF NOT EXISTS cover_failures (cover_id INTEGER PRIMARY KEY, retry_after INTEGER NOT NULL)')
     connection.close()
 
@@ -46,14 +47,22 @@ def init_app(app):
 def fetch_search(connection, query, page):
     cached = connection.execute('SELECT payload,fetched_at FROM catalog_searches WHERE query=? AND page=?',
                                 (query, page)).fetchone()
-    if cached and time.time() - cached['fetched_at'] < 86400 and all('cover_id' in work for work in json.loads(cached['payload'])['works']):
+    if cached and time.time() - cached['fetched_at'] < 86400 and all('cover_edition' in work for work in json.loads(cached['payload'])['works']):
         return json.loads(cached['payload'])
     result = openlibrary.search(query, page)
-    result['works'] = [{**work, 'cover_id': work.get('cover_id')} for work in result['works']]
+    result['works'] = [{**work, 'cover_id': work.get('cover_id'), 'cover_edition': work.get('cover_edition')} for work in result['works']]
+    previous = {work['work_id']: connection.execute('SELECT cover_id,cover_edition FROM catalog_books WHERE work_id=?',
+                                                  (work['work_id'],)).fetchone() for work in result['works']}
     with connection:
         connection.executemany(UPSERT_WORK, result['works'])
-        connection.executemany('UPDATE catalog_books SET cover_id=?,cover_checked=? WHERE work_id=?',
-                               [(work.get('cover_id'), int(time.time()), work['work_id']) for work in result['works']])
+        for work in result['works']:
+            old = previous[work['work_id']]
+            changed = any(work.get(field) is not None and (old is None or work[field] != old[field])
+                          for field in ('cover_id', 'cover_edition'))
+            if changed:
+                connection.execute("DELETE FROM cover_work_status WHERE work_id=? AND state!='ready'", (work['work_id'],))
+        connection.executemany('UPDATE catalog_books SET cover_id=COALESCE(?,cover_id),cover_edition=COALESCE(?,cover_edition) WHERE work_id=?',
+                               [(work.get('cover_id'), work.get('cover_edition'), work['work_id']) for work in result['works']])
         connection.execute('INSERT INTO catalog_searches VALUES (?,?,?,?) ON CONFLICT(query,page) '
                            'DO UPDATE SET payload=excluded.payload,fetched_at=excluded.fetched_at',
                            (query, page, json.dumps(result), int(time.time())))
